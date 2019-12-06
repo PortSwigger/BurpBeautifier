@@ -9,7 +9,7 @@ from burp import IContextMenuInvocation
 from burp import IBurpExtenderCallbacks
 from burp import ITab
 
-from javax.swing import JFrame, JPanel, JButton, JLabel, JTextArea, JMenu, JMenuItem
+from javax.swing import JFrame, JPanel, JButton, JLabel, JTextArea, JTextField, JMenuItem
 from javax.swing import JScrollPane, JTabbedPane
 from javax.swing import JCheckBox, JComboBox
 from javax.swing import Box, BorderFactory
@@ -18,8 +18,8 @@ from javax.swing import BoxLayout
 from javax.swing.undo import UndoManager, CompoundEdit
 from javax.swing.event import UndoableEditEvent, DocumentListener
 from javax.swing.text import PlainDocument
-from java.awt.event import ItemEvent, FocusListener
-from java.awt import GridBagLayout, GridBagConstraints, BorderLayout, GridLayout, FlowLayout
+from java.awt.event import ItemEvent, FocusListener, MouseAdapter
+from java.awt import GridBagLayout, GridBagConstraints, BorderLayout, FlowLayout
 from java.awt import Dimension, Color, Component
 
 import re
@@ -58,6 +58,9 @@ F_XML = "XML"
 supportedFormats = [F_JS, F_JSON, F_HTML, F_XML]
 
 options = {
+    "general": {
+        "dataMaxSize": 680 * 1024  # Data size limit, cause the Jython is slow. 680 KB by default
+    },
     "messageEditorTabFormat": {
         F_JS: True,
         F_JSON: True,
@@ -90,9 +93,6 @@ def contentType2Format(contentType):
         format = F_XML
     return format
 
-# data size limit. Cause the Jython is slow.
-dataMaxSize = 680 * 1024
-
 class BeautifyException(Exception):
     pass
 
@@ -107,7 +107,7 @@ def beautify(data, format, raise_exception=False, beautify_html=True):
     :return:
     :rtype: return <str> if data is <str> type; return <unicode> if data is <unicode> type. The error msg is always <str> type
     """
-    if len(data) > dataMaxSize:
+    if len(data) > options.get("general").get("dataMaxSize"):
         result = "Max Size Limit"
         if raise_exception:
             raise BeautifyException(result)
@@ -118,7 +118,9 @@ def beautify(data, format, raise_exception=False, beautify_html=True):
             # if data is <str> type, result is <str> too; if data is <unicode> type, result is <unicode> too
             result = jsbeautifier.beautify(data)
         elif format == F_JSON:
-            result = jsbeautifier.beautify(data)
+            opts = jsbeautifier.default_options()
+            opts.preserve_newlines = False
+            result = jsbeautifier.beautify(data, opts)
         elif format == F_HTML:
             soup = BeautifulSoup(data, features="html.parser")
             # beautify jscode in html
@@ -550,9 +552,43 @@ class BeautifierOptionsPanel(JScrollPane):
         self.contentWrapper = JPanel(GridBagLayout())
         self.setViewportView(self.contentWrapper)
         self.getVerticalScrollBar().setUnitIncrement(16)
+        self.addMouseListener(self.RequestFocusListener(self))  # Let textArea lose focus when click empty area
 
         innerContainer = JPanel(GridBagLayout())
+        innerContainer.setFocusable(True)  # make sure the maxSizeText TextField is not focused when BeautifierOptionsPanel display
 
+        # generalOptionPanel and it's inner component
+        maxSizeLabel = JLabel("Max Size: ")
+        self.maxSizeText = JTextField(5)
+        self.maxSizeText.setHorizontalAlignment(SwingConstants.RIGHT)
+        self.maxSizeText.addFocusListener(self.MaxSizeTextListener(self))
+        sizeUnitLabel = JLabel("KB")
+
+        generalOptionPanel = JPanel(GridBagLayout())
+        generalOptionPanel.setBorder(BorderFactory.createTitledBorder("General Options"))
+        gbc = GridBagConstraints()
+        gbc.anchor = GridBagConstraints.WEST
+        gbc.gridx = 0
+        gbc.gridy = 0
+        generalOptionPanel.add(maxSizeLabel, gbc)
+        gbc.fill = GridBagConstraints.HORIZONTAL
+        gbc.gridx = 1
+        gbc.gridy = 0
+        generalOptionPanel.add(self.maxSizeText, gbc)
+        gbc.fill = GridBagConstraints.NONE
+        gbc.gridx = 2
+        gbc.gridy = 0
+        gbc.weightx = 1.0
+        generalOptionPanel.add(sizeUnitLabel, gbc)
+
+        gbc = GridBagConstraints()
+        gbc.fill = GridBagConstraints.BOTH
+        gbc.gridx = 1
+        gbc.gridy = 0
+        gbc.gridheight = 2
+        innerContainer.add(generalOptionPanel, gbc)
+
+        # messageTabOptionPanel and it's inner component
         self.messageTabFormatCheckBoxs = []
         for f in supportedFormats:
             ckb = JCheckBox(f)
@@ -565,15 +601,13 @@ class BeautifierOptionsPanel(JScrollPane):
         for b in self.messageTabFormatCheckBoxs:
             messageTabOptionPanel.add(b)
 
-        gbc = GridBagConstraints()
-        gbc.fill = GridBagConstraints.BOTH
         gbc.gridx = 1
         gbc.gridy = 2
         gbc.gridheight = 9
 
         innerContainer.add(messageTabOptionPanel, gbc)
 
-
+        # replaceResponsePanel and it's inner component
         self.chkEnableReplace = JCheckBox("Enable")
         self.chkEnableReplace.addItemListener(self.repalceResponseBoxListener)
         replaceResponseFormatLabel = JLabel("Format")
@@ -607,7 +641,6 @@ class BeautifierOptionsPanel(JScrollPane):
         replaceResponsePanel.add(Box.createVerticalStrut(10))
         replaceResponsePanel.add(replaceResponseExcludeLabel)
         replaceResponsePanel.add(URLExcludeScrollPane)
-
 
         gbc.gridy = 11
         innerContainer.add(replaceResponsePanel, gbc)
@@ -646,6 +679,8 @@ class BeautifierOptionsPanel(JScrollPane):
         self.URLExcludeTextArea.setEnabled(True)
 
     def setDefaultOptionDisplay(self):
+        self.maxSizeText.setText(str(options.get("general").get("dataMaxSize") / 1024))
+
         for chb in self.messageTabFormatCheckBoxs:
             format = chb.getText()
             chb.setSelected(options.get("messageEditorTabFormat").get(format))
@@ -664,7 +699,34 @@ class BeautifierOptionsPanel(JScrollPane):
             self.disableReplaceResponseDisplay()
 
     def saveOptions(self):
-        self._extender._callbacks.saveExtensionSetting("options", json.dumps(options))
+        if self._extender:
+            self._extender._callbacks.saveExtensionSetting("options", json.dumps(options))
+
+    class RequestFocusListener(MouseAdapter):
+        def __init__(self, beautifierOptionsPanel):
+            super(BeautifierOptionsPanel.RequestFocusListener, self).__init__()
+            self.beautifierOptionsPanel = beautifierOptionsPanel
+
+        def mouseClicked(self, e):
+            self.beautifierOptionsPanel.requestFocusInWindow()
+
+    class MaxSizeTextListener(FocusListener):
+        def __init__(self, beautifierOptionsPanel):
+            super(BeautifierOptionsPanel.MaxSizeTextListener, self).__init__()
+            self.beautifierOptionsPanel = beautifierOptionsPanel
+
+        def focusGained(self, e):
+            pass
+
+        def focusLost(self, e):
+            size = e.getSource().getText()
+            try:
+                size = int(float(size))
+                options.get("general").update({"dataMaxSize": size * 1024})
+                e.getSource().setText(str(size))
+                self.beautifierOptionsPanel.saveOptions()
+            except:
+                e.getSource().setText(str(options.get("general").get("dataMaxSize") / 1024))
 
     def messageTabFormatListener(self, e):
         format = e.getSource().getText()
@@ -742,7 +804,7 @@ def main():
 
         def main(self):
             self.addToTabbedPane("Beautify", BeautifierPanel())
-            self.addToTabbedPane("Options", BeautifierOptionsPanel())
+            self.addToTabbedPane("Options", BeautifierOptionsPanel(None))
 
             self.start()
 
