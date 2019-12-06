@@ -1,0 +1,33 @@
+<p>BurpBeautifier is a Burpsuite extension for beautifying request/response body, supporting JS, JSON, HTML, XML format, writing in Jython 2.7.</p>
+<p>Options</p>
+<ul>
+  <li>Enable in MessageEditorTab: By default, JavaScript and JSON is enable, and HTML and XML is disable cause Burpsuite already beautify these.</li>
+  <li>Replace PROXY Response: Enable it if you want to beautify response and replace it.</li>
+</ul>
+<p>Features</p>
+<ul>
+  <li>
+    <p>Supporting Format</p>
+    <ul>
+      <li>JS: use jsbeautify module</li>
+      <li>JSON: use jsbeautify module</li>
+      <li>HTML: use beautifulsoup4 module, and jsbeautify module for js code in HTML</li>
+      <li>XML: use xml module</li>
+    </ul>
+  </li>
+  <li>Writing in Jython, modify source code conveniently. eg: Modify the beautify function to change how to beautify.</li>
+  <li>Beautify and replace response body.</li>
+  <li>Option setting persistence.</li>
+  <li>Send Request/Response body to Beautifier Panel</li>
+</ul>
+<p>Notice</p>
+<ul>
+  <li>It may modify data, such as: beautifying xml will add the &lt;?xml version="1.0" encoding="UTF-8"?&gt; header, beautifying html will repair html tag.</li>
+  <li>Assuming the request/response body is utf-8, so if the body is not utf8 encoding or compatible with utf8, it may not work well.</li>
+  <li>Not considering gzip/deflate compress/decompress, so need the Proxy-&gt;Options-&gt;Miscellaneous-&gt;Unpack gzip/deflate in response is enabled (ON by default)</li>
+</ul>
+<p>Limitations</p>
+<ul>
+  <li>Installation is not convenient. Not like extension writing in Java, just add a jar file.</li>
+  <li>Jython is slow. So It will not beautify if size excess dataMaxSize(default is 680KB)</li>
+</ul>

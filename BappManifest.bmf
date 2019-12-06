@@ -1,0 +1,12 @@
+Uuid: a005a6a8fba34a8893ec649f76a8d5a7
+ExtensionType: 2
+Name: Burp Beautifier
+RepoName: burp-beautifier
+ScreenVersion: 1.0
+SerialVersion: 2
+MinPlatformVersion: 2
+ProOnly: False
+Author: Ovi3
+ShortDescription: BurpBeautifier is a Burpsuite extension for beautifying request/response body, supporting JS, JSON, HTML, XML format, writing in Jython 2.7.
+EntryPoint: beautifier.py
+BuildCommand: 
