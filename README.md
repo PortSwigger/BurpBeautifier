@@ -2,10 +2,15 @@ BurpBeautifier is a Burpsuite extension for beautifying request/response body, s
 
 
 ### Installation
-(Assume you already have Burpsuite and Java Environment)
+Install from BApp:
+1. Visit [Jython Offical Site](https://www.jython.org/download), and download Jython Standalone jar file.
+2. Open Burpsuite, goto Extender -> Options -> Python Environment, set the Location of Jython Jar. And goto Extender -> BApp Store, find Burp Beautifier and install it.
+
+
+Manual Install:
 1. Visit [Jython Offical Site](https://www.jython.org/download), and download Jython Installer.
 2. Open Jython Installer to install Jython(In standard mode, make sure it will install pip). Assume it has be installed in `D:\jython2.7.1` directory.
-3. Install Jython modules: `D:\jython2.7.1\bin\jython.exe -m pip install -r requirements.txt`.(If your pip is not installed successfully, check this [article](https://www.jianshu.com/p/527aa4385ea1) I written in Chinese)
+3. Install Jython modules: `D:\jython2.7.1\bin\jython.exe -m pip install -r requirements.txt`.
 4. Open Burpsuite, goto Extender -> Options -> Python Environment, set the Location of Jython Jar is `D:\jython2.7.1\jython.jar`, and the Folder for loading modules is `D:\jython2.7.1`.
 5. Download this tool, Open Burpsuite, goto Extender -> Extensions -> Add -> Choose the beautifier.py.
 
@@ -16,12 +21,13 @@ MessageEditorTab:
 Standalone beautifier panel:
 ![beautifierTab](imgs/beautifierTab.png)
 
-Options:
+Options panel:
 ![options](imgs/options.png)
 
-### Options
-1. `Enable in MessageEditorTab`: By default, JavaScript and JSON is enable, and HTML and XML is disable cause Burpsuite already beautify these.
-2. `Replace PROXY Response`: Enable it if you want to beautify response and replace it.
+Options setting:
+1. `General Options`: Set Max Size of data that should be beautified.
+2. `Enable in MessageEditorTab`: By default, JavaScript and JSON is enable, and HTML and XML is disable cause Burpsuite already beautify these.
+3. `Replace PROXY Response`: Enable it if you want to beautify response and replace it.
 
 
 
@@ -34,13 +40,12 @@ Options:
 2. Writing in Jython, modify source code conveniently. eg: Modify the beautify function to change how to beautify.
 3. Beautify and replace response body.
 4. Option setting persistence.
-5. Send Resquest/Response body to Beautifier Panel
+5. Send Resquest/Response body to Beautifier Panel.
 
 ### Notice
 1. It may modify data, such as: beautifying xml will add the `<?xml version="1.0" encoding="UTF-8"?>` header, beautifying html will repair html tag.
-2. Assuming the request/response body is utf-8, so if the body is not utf8 encoding or compatible with utf8, it may not work well.
-3. Not considering gzip/deflate compress/decompress, so need the Proxy->Options->Miscellaneous->Unpack gzip/deflate in response is enabled (ON by default)
+2. It assume the request/response body is utf-8, so if the body is not utf8 encoding or compatible with utf8, it may not work well.
+3. Not considering gzip/deflate compress/decompress, so need the Proxy->Options->Miscellaneous->Unpack gzip/deflate in response is enabled(Enabled by default).
 
 ### Limitations
-1. Installation is not convenient. Not like extension writing in Java, just add a jar file.
-2. Jython is slow. So It will not beautify if size excess dataMaxSize(default is 680KB)
+1. Jython is slow. So It will not beautify if size excess dataMaxSize(default is 680KB).

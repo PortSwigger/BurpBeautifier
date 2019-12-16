@@ -31,9 +31,10 @@ import jsbeautifier
 from bs4 import BeautifulSoup
 
 
-# "xxContentTypes" below is lower-case
+# "xxContentTypes" values below should be lower-case
 jsContentTypes = [
     "application/javascript",
+    "application/x-javascript",
     "text/javascript"
 ]
 jsonContentTypes = [
@@ -46,7 +47,8 @@ htmlContentTypes = [
 ]
 xmlContentTypes = [
     "text/xml",
-    "application/xml"
+    "application/xml",
+    "image/svg+xml"
 ]
 
 # formats (string constants)
@@ -91,6 +93,19 @@ def contentType2Format(contentType):
         format = F_HTML
     if any(map(lambda c: contentType.find(c) >= 0, xmlContentTypes)):
         format = F_XML
+    return format
+
+def mimeType2Format(mimeType):
+    format = None
+    mimeType = mimeType.upper()
+    if mimeType == "JSON":
+        format = F_JSON
+    elif mimeType == "SCRIPT":
+        format = F_JS
+    elif mimeType == "XML":
+        format = F_XML
+    elif mimeType == "HTML":
+        format = F_HTML
     return format
 
 class BeautifyException(Exception):
@@ -283,9 +298,8 @@ class BurpExtender(IBurpExtender, ITab, IMessageEditorTabFactory, IHttpListener,
             format = contentType2Format(contentType)
 
         if format is None:
-            inferredMimeType = responseInfo.getInferredMimeType()
-            if inferredMimeType == "JSON":  # In this case: The content-type of response is text/plain but the body is JSON
-                format = F_JSON
+            # Maybe the content-type of response is text/plain but the body is JSON
+            format = mimeType2Format(responseInfo.getInferredMimeType())
 
         if format is None:
             return
@@ -368,10 +382,8 @@ class BeautifierTab(IMessageEditorTab):
         if contentType:
             format = contentType2Format(contentType)
 
-        if isRequest == False:
-            inferredMimeType = requestResponseInfo.getInferredMimeType()
-            if inferredMimeType == "JSON":  # In this case: The content-type of response is text/plain but the body is JSON
-                format = F_JSON
+        if format is None and isRequest == False:
+            format = mimeType2Format(requestResponseInfo.getInferredMimeType())
 
         if format is None:
             return False
